@@ -24,12 +24,22 @@ except Exception as e:
     st.stop()
 
 # ==========================================
-# 2. FORMULARIO DINÁMICO DE CAPTURA
+# 2. DICCIONARIOS DE DATOS (LEXICODEX)
+# ==========================================
+diccionario_lexicodex = {
+    "Contaduría": ["Contabilidad", "Fiscal", "Normas de Información", "Instituciones", "Finanzas"],
+    "Administración": ["Gestión", "Economía", "Capital Humano", "Mercadotecnia", "Tecnologías de la Información"],
+    "Derecho": ["Derechos humanos", "Ordenamiento Jurídico", "Amparo", "Jurisprudencia", "Doctrina"],
+    "Ludo": ["Aprendizaje", "Artes", "Ciencias", "Cognición", "Democracia", "Deportes", "Ejercicio Físico", "Ejercicio Mental", "Eminentes", "Expresiones", "Filosofía", "Geopolítica", "Gobierno", "Historia", "Humanidades", "Instituciones", "Léxico", "Lógica", "Matemáticas", "Mindfulness", "Motivación", "Neurociencia", "Países", "Pensamiento", "Política", "Procrastinación", "Profesiones", "Psicología", "Salud", "Santiago Ixcuintla", "Sociedad", "Varios Temas"],
+    "Sudokus": ["Por Actualizar"]
+}
+
+# ==========================================
+# 3. FORMULARIO DINÁMICO DE CAPTURA
 # ==========================================
 with st.sidebar:
     st.header("📝 Nueva Actividad")
     
-    # 🔴 Selector de Área (FUERA del formulario para que sea dinámico)
     area_seleccionada = st.selectbox(
         "📂 Selecciona el Área de Trabajo:", 
         ["Lexicodex", "NewsLetter", "TikTok"]
@@ -37,77 +47,84 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # 🟢 FORMULARIO: LEXICODEX
+    # 🟢 FORMULARIO: LEXICODEX (Sin st.form para permitir actualización en tiempo real)
     if area_seleccionada == "Lexicodex":
-        with st.form("form_lexicodex", clear_on_submit=True):
-            st.subheader("Datos de Lexicodex")
-            fecha = st.date_input("Fecha", date.today())
-            actividad = st.text_input("Actividad (Ej. Reunión cliente)")
-            categoria = st.selectbox("Categoría", ["Producción", "Comercial", "Estrategia", "Administración"])
-            proyecto = st.text_input("Proyecto / Cliente")
+        st.subheader("Datos de Lexicodex")
+        
+        # Fechas
+        col_f1, col_f2 = st.columns(2)
+        with col_f1:
+            f_inicio = st.date_input("Fecha Inicio", date.today())
+        with col_f2:
+            f_termino = st.date_input("Fecha Término", date.today())
+        
+        # Cascada de Categorías
+        cat_lex = st.selectbox("Categoría", list(diccionario_lexicodex.keys()))
+        sub_cat_lex = st.selectbox("Sub Categoría", diccionario_lexicodex[cat_lex])
+        sub_sub_cat = st.text_input("Sub sub categoría (Especificar)")
+        
+        # Actividad
+        actividad_lex = st.selectbox("Actividad", ["Crucigrama", "Autodefinido", "Busca Palabra"])
+        
+        # Tiempos
+        col_t1, col_t2 = st.columns(2)
+        with col_t1:
+            min_reales = st.number_input("Min. Reales", min_value=1, value=60)
+        with col_t2:
+            min_objetivo = st.number_input("Min. Objetivo", min_value=1, value=60)
             
-            col1, col2 = st.columns(2)
-            with col1:
-                min_reales = st.number_input("Min. Reales", min_value=1, value=60)
-            with col2:
-                min_objetivo = st.number_input("Min. Objetivo", min_value=1, value=60)
+        # Variables de control
+        prioridad = st.selectbox("Prioridad", [3, 2, 1], format_func=lambda x: f"{x} - {'Alta' if x==3 else 'Media' if x==2 else 'Baja'}")
+        estado = st.selectbox("Estado", ["Cumplido", "Parcial", "Pendiente"])
+        calidad = st.slider("Calidad del Entregable", 1, 5, 5)
+        
+        # Costo
+        costo_hora = st.number_input("Costo por hora ($)", min_value=0.0, value=850.0, step=50.0)
+        
+        if st.button("💾 Registrar en Lexicodex", type="primary"):
+            if sub_sub_cat == "":
+                st.warning("⚠️ El campo de Sub sub categoría no puede estar vacío.")
+            else:
+                nuevo_registro = {
+                    "area": "Lexicodex",
+                    "fecha_inicio": str(f_inicio),
+                    "fecha_termino": str(f_termino),
+                    "fecha": str(f_termino), # Se guarda también aquí para compatibilidad del Dashboard
+                    "categoria": cat_lex,
+                    "sub_categoria": sub_cat_lex,
+                    "sub_sub_categoria": sub_sub_cat,
+                    "actividad": actividad_lex,
+                    "minutos_reales": min_reales,
+                    "minutos_objetivo": min_objetivo,
+                    "prioridad": prioridad,
+                    "estado": estado,
+                    "calidad": calidad,
+                    "costo_hora": costo_hora,
+                    "proyecto": "Lexicodex Interno", # Para no romper la gráfica de proyectos
+                    "ingreso": 0.0 # Por defecto para evitar errores matemáticos
+                }
                 
-            prioridad = st.selectbox("Prioridad", [3, 2, 1], format_func=lambda x: f"{x} - {'Alta' if x==3 else 'Media' if x==2 else 'Baja'}")
-            estado = st.selectbox("Estado", ["Cumplido", "Parcial", "Pendiente"])
-            calidad = st.slider("Calidad del Entregable", min_value=1, max_value=5, value=5)
-            
-            ingreso_str = st.text_input("Ingreso Generado ($)", value="0.00", help="Puedes usar comas, ej: 4,500.00")
-            
-            submit_lexicodex = st.form_submit_button("Registrar en Lexicodex")
-            
-            if submit_lexicodex:
-                if actividad == "":
-                    st.warning("⚠️ Debes escribir el nombre de la actividad.")
-                else:
-                    try:
-                        ingreso_limpio = float(ingreso_str.replace(",", ""))
-                    except ValueError:
-                        st.error("⚠️ Formato de ingreso no válido.")
-                        ingreso_limpio = 0.0
-                    
-                    nuevo_registro = {
-                        "area": "Lexicodex",
-                        "fecha": str(fecha),
-                        "actividad": actividad,
-                        "categoria": categoria,
-                        "proyecto": proyecto,
-                        "minutos_reales": min_reales,
-                        "minutos_objetivo": min_objetivo,
-                        "prioridad": prioridad,
-                        "estado": estado,
-                        "calidad": calidad,
-                        "ingreso": ingreso_limpio
-                    }
-                    
-                    try:
-                        supabase.table("registro_actividades").insert(nuevo_registro).execute()
-                        st.success("✅ ¡Actividad de Lexicodex registrada!")
-                    except Exception as e:
-                        st.error(f"❌ Error en BD: {e}")
+                try:
+                    supabase.table("registro_actividades").insert(nuevo_registro).execute()
+                    st.success("✅ ¡Actividad de Lexicodex registrada!")
+                except Exception as e:
+                    st.error(f"❌ Error en BD: {e}")
 
-    # 🟡 FORMULARIO: NEWSLETTER (En construcción)
+    # 🟡 FORMULARIOS PENDIENTES
     elif area_seleccionada == "NewsLetter":
         with st.form("form_newsletter", clear_on_submit=True):
             st.subheader("Datos de NewsLetter")
-            st.info("⏳ Los campos específicos para NewsLetter están pendientes de definición.")
-            # Aquí agregaremos los campos de NewsLetter en el siguiente paso
+            st.info("⏳ Los campos de NewsLetter se programarán aquí.")
             submit_newsletter = st.form_submit_button("Registrar en NewsLetter")
 
-    # 🟣 FORMULARIO: TIKTOK (En construcción)
     elif area_seleccionada == "TikTok":
         with st.form("form_tiktok", clear_on_submit=True):
             st.subheader("Datos de TikTok")
-            st.info("⏳ Los campos específicos para TikTok están pendientes de definición.")
-            # Aquí agregaremos los campos de TikTok en el siguiente paso
+            st.info("⏳ Los campos de TikTok se programarán aquí.")
             submit_tiktok = st.form_submit_button("Registrar en TikTok")
 
 # ==========================================
-# 3. EXTRACCIÓN Y MOTOR KPI
+# 4. EXTRACCIÓN Y MOTOR KPI
 # ==========================================
 respuesta_db = supabase.table("registro_actividades").select("*").execute()
 datos = respuesta_db.data
@@ -117,15 +134,12 @@ if not datos:
 else:
     df = pd.DataFrame(datos)
     
-    # Manejo de compatibilidad (por si hay registros antiguos sin área)
     if 'area' not in df.columns:
         df['area'] = 'Lexicodex'
     df['area'] = df['area'].fillna('Lexicodex')
     
-    # 🔘 FILTRO GLOBAL PARA EL DASHBOARD
     area_filtro = st.radio("Mostrar resultados para:", ["Todas las Áreas", "Lexicodex", "NewsLetter", "TikTok"], horizontal=True)
     
-    # Aplicar filtro si no es "Todas"
     if area_filtro != "Todas las Áreas":
         df = df[df['area'] == area_filtro]
 
@@ -138,7 +152,6 @@ else:
         
         tab_dash, tab_gestion = st.tabs(["📊 Dashboard Visual", "🗄️ Gestión de Registros"])
 
-        # PESTAÑA 1: DASHBOARD VISUAL
         with tab_dash:
             horas_totales = df['horas_reales'].sum()
             ingresos_totales = df['ingreso'].sum()
@@ -187,11 +200,18 @@ else:
                 st.plotly_chart(fig1, use_container_width=True)
 
             with col_graf2:
-                df_proj = df.groupby("proyecto")[["ingreso", "costo_actividad"]].sum().reset_index()
-                df_proj = df_proj[df_proj['proyecto'].astype(bool)]
-                fig2 = px.bar(df_proj, x="proyecto", y=["ingreso", "costo_actividad"], 
-                              title="Ingresos vs Costo por Proyecto", barmode="group",
-                              labels={"value": "Monto ($)", "variable": "Tipo", "proyecto": "Proyecto"})
+                # Si estamos en Lexicodex, graficamos por Categoría en lugar de proyecto (ya que no hay clientes)
+                if area_filtro == "Lexicodex":
+                    df_graf2 = df.groupby("sub_categoria")[["costo_actividad"]].sum().reset_index()
+                    fig2 = px.bar(df_graf2, x="sub_categoria", y="costo_actividad", 
+                                  title="Costo Operativo por Sub Categoría",
+                                  labels={"costo_actividad": "Costo ($)", "sub_categoria": "Sub Categoría"})
+                else:
+                    df_graf2 = df.groupby("proyecto")[["ingreso", "costo_actividad"]].sum().reset_index()
+                    df_graf2 = df_graf2[df_graf2['proyecto'].astype(bool)]
+                    fig2 = px.bar(df_graf2, x="proyecto", y=["ingreso", "costo_actividad"], 
+                                  title="Ingresos vs Costo por Proyecto", barmode="group",
+                                  labels={"value": "Monto ($)", "variable": "Tipo", "proyecto": "Proyecto"})
                 st.plotly_chart(fig2, use_container_width=True)
 
         # PESTAÑA 2: GESTIÓN DE DATOS
@@ -202,8 +222,10 @@ else:
             df_vista['margen'] = df_vista['margen'].apply(lambda x: f"${x:,.2f}")
             df_vista['horas_reales'] = df_vista['horas_reales'].apply(lambda x: f"{x:.2f} h")
             
-            # Mostramos también el Área en la tabla
-            cols_mostrar = ['area', 'fecha', 'actividad', 'categoria', 'proyecto', 'horas_reales', 'ingreso', 'margen', 'estado']
+            # Ajustamos las columnas para que muestre las nuevas si existen
+            cols_posibles = ['area', 'fecha', 'fecha_inicio', 'fecha_termino', 'actividad', 'categoria', 'sub_categoria', 'sub_sub_categoria', 'horas_reales', 'margen', 'estado']
+            cols_mostrar = [col for col in cols_posibles if col in df_vista.columns]
+            
             st.dataframe(df_vista[cols_mostrar], use_container_width=True)
             
             st.markdown("---")

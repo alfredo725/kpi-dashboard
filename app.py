@@ -3,6 +3,7 @@ from supabase import create_client, Client
 from datetime import date
 import pandas as pd
 import plotly.express as px
+import time  # <-- Importado para permitir que los mensajes de éxito sean leíbles
 
 # ==========================================
 # 1. CONFIGURACIÓN DEL ENTORNO
@@ -208,14 +209,12 @@ with st.sidebar:
 # ==========================================
 # 4. EXTRACCIÓN Y MOTOR KPI
 # ==========================================
-# Ordenamos por ID descendente para ver los más recientes primero al editar
 respuesta_db = supabase.table("registro_actividades").select("*").order("id", desc=True).execute()
 datos = respuesta_db.data
 
 if not datos:
     st.info("📊 Registra tu primera actividad para generar el Dashboard.")
 else:
-    # df_completo almacena todos los datos sin filtros para que las pestañas sean independientes
     df_completo = pd.DataFrame(datos)
     
     if 'area' not in df_completo.columns:
@@ -230,7 +229,6 @@ else:
     with tab_dash:
         area_filtro = st.radio("Mostrar resultados para:", ["Todas las Áreas", "Lexicodex", "NewsLetter", "TikTok"], horizontal=True)
         
-        # Filtramos un dataframe específico para el dashboard (df_dash)
         df_dash = df_completo.copy()
         if area_filtro != "Todas las Áreas":
             df_dash = df_dash[df_dash['area'] == area_filtro]
@@ -327,7 +325,6 @@ else:
         with col_b2:
             texto_busqueda = st.text_input("Buscar por palabra (Actividad, Tema, Categoría...)", placeholder="Ej. Finanzas, Video, Amparo...")
 
-        # Aplicamos los filtros a un dataframe dedicado para la tabla (df_tabla)
         df_tabla = df_completo.copy()
         
         if filtro_tabla_area != "Todas":
@@ -341,7 +338,6 @@ else:
         
         st.markdown(f"**Resultados encontrados:** {len(df_tabla)}")
 
-        # Preparar vista de la tabla
         df_vista = df_tabla.copy()
         df_vista['horas_reales'] = (df_vista['minutos_reales'] / 60).apply(lambda x: f"{x:.2f} h")
         
@@ -356,7 +352,6 @@ else:
         if df_tabla.empty:
             st.info("No hay registros que coincidan con tu búsqueda.")
         else:
-            # Selector inteligente basado en los resultados de la búsqueda
             opciones_editar = dict(zip(df_tabla['id'], df_tabla['area'] + " | " + df_tabla['fecha'].astype(str) + " | " + df_tabla['actividad']))
             
             registro_seleccionado = st.selectbox(
@@ -374,6 +369,7 @@ else:
                         try:
                             supabase.table("registro_actividades").delete().eq("id", registro_seleccionado).execute()
                             st.success("✅ Registro eliminado correctamente. Actualizando...")
+                            time.sleep(1.5) # Pausa para que el usuario pueda leer el mensaje
                             st.rerun()
                         except Exception as e:
                             st.error(f"❌ Error al eliminar el registro: {e}")
@@ -381,7 +377,6 @@ else:
                 elif accion == "✏️ Editar Registro":
                     st.info("Modifica los datos que necesites y presiona Guardar Cambios.")
                     
-                    # Recuperamos los datos de la fila seleccionada
                     fila = df_tabla[df_tabla['id'] == registro_seleccionado].iloc[0]
                     area_edit = fila['area']
                     
@@ -408,7 +403,8 @@ else:
                             idx_sub = sub_cats.index(sub_cat_val) if sub_cat_val in sub_cats else 0
                             sub_cat_e = st.selectbox("Sub Categoría", sub_cats, index=idx_sub, key="esub")
                             
-                            sub_sub_e = st.text_input("Sub sub categoría", str(fila.get('sub_sub_categoria', '')), key="esubsub")
+                            sub_sub_val = fila.get('sub_sub_categoria', '')
+                            sub_sub_e = st.text_input("Sub sub categoría", str(sub_sub_val) if pd.notna(sub_sub_val) else "", key="esubsub")
                             
                             act_val = fila.get('actividad', 'Crucigrama')
                             idx_act = ["Crucigrama", "Autodefinido", "Busca Palabra"].index(act_val) if act_val in ["Crucigrama", "Autodefinido", "Busca Palabra"] else 0
@@ -417,33 +413,41 @@ else:
                             datos_actualizados.update({"categoria": cat_e, "sub_categoria": sub_cat_e, "sub_sub_categoria": sub_sub_e, "actividad": act_e})
                         
                         elif area_edit in ["NewsLetter", "TikTok"]:
-                            tema_e = st.text_input("Tema", str(fila.get('tema', '')), key="etema")
+                            tema_val = fila.get('tema', '')
+                            tema_e = st.text_input("Tema", str(tema_val) if pd.notna(tema_val) else "", key="etema")
                             prefijo = "Redacción: " if area_edit == "NewsLetter" else "Video: "
                             datos_actualizados.update({"tema": tema_e, "actividad": f"{prefijo}{tema_e}"})
 
                         col_t1, col_t2 = st.columns(2)
                         with col_t1: 
-                            min_r_e = st.number_input("Min. Reales", min_value=1, value=int(fila.get('minutos_reales', 60)), key="emr")
+                            min_r_val = int(fila['minutos_reales']) if pd.notna(fila.get('minutos_reales')) else 60
+                            min_r_e = st.number_input("Min. Reales", min_value=1, value=min_r_val, key="emr")
                         with col_t2: 
-                            min_o_e = st.number_input("Min. Objetivo", min_value=1, value=int(fila.get('minutos_objetivo', 60)), key="emo")
+                            min_o_val = int(fila['minutos_objetivo']) if pd.notna(fila.get('minutos_objetivo')) else 60
+                            min_o_e = st.number_input("Min. Objetivo", min_value=1, value=min_o_val, key="emo")
                         
-                        pri_val = int(fila.get('prioridad', 3))
+                        pri_val = int(fila['prioridad']) if pd.notna(fila.get('prioridad')) else 3
                         idx_pri = [3, 2, 1].index(pri_val) if pri_val in [3, 2, 1] else 0
                         pri_e = st.selectbox("Prioridad", [3, 2, 1], index=idx_pri, format_func=lambda x: f"{x} - {'Alta' if x==3 else 'Media' if x==2 else 'Baja'}", key="epri")
                         
                         est_val = fila.get('estado', 'Cumplido')
+                        if pd.isna(est_val): est_val = 'Cumplido'
                         idx_est = ["Cumplido", "Parcial", "Pendiente"].index(est_val) if est_val in ["Cumplido", "Parcial", "Pendiente"] else 0
                         est_e = st.selectbox("Estado", ["Cumplido", "Parcial", "Pendiente"], index=idx_est, key="eest")
                         
-                        cal_e = st.slider("Calidad del Entregable", 1, 5, int(fila.get('calidad', 5)), key="ecal")
-                        cost_e = st.number_input("Costo por Hora ($)", min_value=0.0, value=float(fila.get('costo_hora', 850.0)), step=50.0, key="ecost")
+                        cal_val = int(fila['calidad']) if pd.notna(fila.get('calidad')) else 5
+                        cal_e = st.slider("Calidad del Entregable", 1, 5, cal_val, key="ecal")
+                        
+                        cost_val = float(fila['costo_hora']) if pd.notna(fila.get('costo_hora')) else 850.0
+                        cost_e = st.number_input("Costo por Hora ($)", min_value=0.0, value=cost_val, step=50.0, key="ecost")
                         
                         datos_actualizados.update({"minutos_reales": min_r_e, "minutos_objetivo": min_o_e, "prioridad": pri_e, "estado": est_e, "calidad": cal_e, "costo_hora": cost_e})
 
                         if st.button("💾 Guardar Cambios", type="primary"):
                             try:
                                 supabase.table("registro_actividades").update(datos_actualizados).eq("id", registro_seleccionado).execute()
-                                st.success("✅ ¡Registro modificado con éxito! Actualizando...")
+                                st.success("✅ ¡Registro modificado con éxito! Actualizando tablero...")
+                                time.sleep(1.5) # Pausa para que el usuario pueda leer el mensaje
                                 st.rerun()
                             except Exception as e:
                                 st.error(f"❌ Error al guardar los cambios: {e}")

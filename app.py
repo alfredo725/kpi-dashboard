@@ -208,48 +208,55 @@ with st.sidebar:
 # ==========================================
 # 4. EXTRACCIÓN Y MOTOR KPI
 # ==========================================
-respuesta_db = supabase.table("registro_actividades").select("*").execute()
+# Ordenamos por ID descendente para ver los más recientes primero al editar
+respuesta_db = supabase.table("registro_actividades").select("*").order("id", desc=True).execute()
 datos = respuesta_db.data
 
 if not datos:
     st.info("📊 Registra tu primera actividad para generar el Dashboard.")
 else:
-    df = pd.DataFrame(datos)
+    # df_completo almacena todos los datos sin filtros para que las pestañas sean independientes
+    df_completo = pd.DataFrame(datos)
     
-    if 'area' not in df.columns:
-        df['area'] = 'Lexicodex'
-    df['area'] = df['area'].fillna('Lexicodex')
+    if 'area' not in df_completo.columns:
+        df_completo['area'] = 'Lexicodex'
+    df_completo['area'] = df_completo['area'].fillna('Lexicodex')
     
-    area_filtro = st.radio("Mostrar resultados para:", ["Todas las Áreas", "Lexicodex", "NewsLetter", "TikTok"], horizontal=True)
-    
-    if area_filtro != "Todas las Áreas":
-        df = df[df['area'] == area_filtro]
+    tab_dash, tab_gestion = st.tabs(["📊 Dashboard Visual", "🗄️ Gestión de Registros"])
 
-    if df.empty:
-        st.warning(f"No hay datos registrados aún para el área: {area_filtro}")
-    else:
-        df['horas_reales'] = df['minutos_reales'] / 60
-        df['costo_actividad'] = df['horas_reales'] * df['costo_hora']
-        df['margen'] = df['ingreso'] - df['costo_actividad']
+    # ---------------------------------------------------------
+    # PESTAÑA 1: DASHBOARD
+    # ---------------------------------------------------------
+    with tab_dash:
+        area_filtro = st.radio("Mostrar resultados para:", ["Todas las Áreas", "Lexicodex", "NewsLetter", "TikTok"], horizontal=True)
         
-        tab_dash, tab_gestion = st.tabs(["📊 Dashboard Visual", "🗄️ Gestión de Registros"])
+        # Filtramos un dataframe específico para el dashboard (df_dash)
+        df_dash = df_completo.copy()
+        if area_filtro != "Todas las Áreas":
+            df_dash = df_dash[df_dash['area'] == area_filtro]
 
-        with tab_dash:
-            horas_totales = df['horas_reales'].sum()
-            ingresos_totales = df['ingreso'].sum()
-            margen_total = df['margen'].sum()
+        if df_dash.empty:
+            st.warning(f"No hay datos registrados aún para el área: {area_filtro}")
+        else:
+            df_dash['horas_reales'] = df_dash['minutos_reales'] / 60
+            df_dash['costo_actividad'] = df_dash['horas_reales'] * df_dash['costo_hora']
+            df_dash['margen'] = df_dash['ingreso'] - df_dash['costo_actividad']
+            
+            horas_totales = df_dash['horas_reales'].sum()
+            ingresos_totales = df_dash['ingreso'].sum()
+            margen_total = df_dash['margen'].sum()
             
             capacidad_mensual = 140
             P = min((horas_totales / capacidad_mensual) * 100, 100) 
             
-            tareas_cumplidas = len(df[df['estado'] == 'Cumplido'])
-            C = (tareas_cumplidas / len(df)) * 100 if len(df) > 0 else 0
+            tareas_cumplidas = len(df_dash[df_dash['estado'] == 'Cumplido'])
+            C = (tareas_cumplidas / len(df_dash)) * 100 if len(df_dash) > 0 else 0
             
-            E = min((df['minutos_objetivo'].sum() / df['minutos_reales'].sum()) * 100, 100) if df['minutos_reales'].sum() > 0 else 0
-            Q = (df['calidad'].mean() / 5) * 100
+            E = min((df_dash['minutos_objetivo'].sum() / df_dash['minutos_reales'].sum()) * 100, 100) if df_dash['minutos_reales'].sum() > 0 else 0
+            Q = (df_dash['calidad'].mean() / 5) * 100
             R = (margen_total / ingresos_totales * 100) if ingresos_totales > 0 else 0
             
-            horas_prioridad_alta = df[df['prioridad'] == 3]['horas_reales'].sum()
+            horas_prioridad_alta = df_dash[df_dash['prioridad'] == 3]['horas_reales'].sum()
             EP = (horas_prioridad_alta / horas_totales) * 100 if horas_totales > 0 else 0
             
             IIDP = (0.25 * P) + (0.20 * C) + (0.15 * E) + (0.15 * Q) + (0.15 * R) + (0.10 * EP)
@@ -275,13 +282,12 @@ else:
             col_graf1, col_graf2 = st.columns(2)
             
             with col_graf1:
-                # La dona agrupa TikTok y NewsLetter por Estado (al no tener categorías como Lexicodex)
                 if area_filtro in ["NewsLetter", "TikTok"]:
-                    df_pie = df.groupby("estado")["horas_reales"].sum().reset_index()
+                    df_pie = df_dash.groupby("estado")["horas_reales"].sum().reset_index()
                     titulo_pie = "Distribución por Estado"
                     nombres = "estado"
                 else:
-                    df_pie = df.groupby("categoria")["horas_reales"].sum().reset_index()
+                    df_pie = df_dash.groupby("categoria")["horas_reales"].sum().reset_index()
                     titulo_pie = "Distribución del Tiempo"
                     nombres = "categoria"
                     
@@ -291,53 +297,153 @@ else:
                 st.plotly_chart(fig1, use_container_width=True)
 
             with col_graf2:
-                # El gráfico de barras se adapta según el área seleccionada
                 if area_filtro == "Lexicodex":
-                    df_graf2 = df.groupby("sub_categoria")[["costo_actividad"]].sum().reset_index()
+                    df_graf2 = df_dash.groupby("sub_categoria")[["costo_actividad"]].sum().reset_index()
                     fig2 = px.bar(df_graf2, x="sub_categoria", y="costo_actividad", 
                                   title="Costo Operativo por Sub Categoría",
                                   labels={"costo_actividad": "Costo ($)", "sub_categoria": "Sub Categoría"})
                 elif area_filtro in ["NewsLetter", "TikTok"]:
-                    df_graf2 = df.groupby("tema")[["costo_actividad"]].sum().reset_index()
+                    df_graf2 = df_dash.groupby("tema")[["costo_actividad"]].sum().reset_index()
                     fig2 = px.bar(df_graf2, x="tema", y="costo_actividad", 
                                   title=f"Costo Operativo por Tema de {area_filtro}",
                                   labels={"costo_actividad": "Costo Operativo ($)", "tema": "Tema"})
                 else:
-                    df_graf2 = df.groupby("proyecto")[["ingreso", "costo_actividad"]].sum().reset_index()
+                    df_graf2 = df_dash.groupby("proyecto")[["ingreso", "costo_actividad"]].sum().reset_index()
                     df_graf2 = df_graf2[df_graf2['proyecto'].astype(bool)]
                     fig2 = px.bar(df_graf2, x="proyecto", y=["ingreso", "costo_actividad"], 
                                   title="Ingresos vs Costo por Proyecto", barmode="group",
                                   labels={"value": "Monto ($)", "variable": "Tipo", "proyecto": "Proyecto"})
                 st.plotly_chart(fig2, use_container_width=True)
 
-        # PESTAÑA 2: GESTIÓN DE DATOS
-        with tab_gestion:
-            st.markdown("### Base de Datos Activa")
-            df_vista = df.copy()
-            df_vista['ingreso'] = df_vista['ingreso'].apply(lambda x: f"${x:,.2f}")
-            df_vista['margen'] = df_vista['margen'].apply(lambda x: f"${x:,.2f}")
-            df_vista['horas_reales'] = df_vista['horas_reales'].apply(lambda x: f"{x:.2f} h")
+    # ---------------------------------------------------------
+    # PESTAÑA 2: GESTIÓN DE DATOS (BUSCADOR Y EDICIÓN)
+    # ---------------------------------------------------------
+    with tab_gestion:
+        st.markdown("### 🔍 Buscador Inteligente y Filtros")
+        
+        col_b1, col_b2 = st.columns([1, 2])
+        with col_b1:
+            filtro_tabla_area = st.selectbox("Filtrar Tabla por Área:", ["Todas", "Lexicodex", "NewsLetter", "TikTok"])
+        with col_b2:
+            texto_busqueda = st.text_input("Buscar por palabra (Actividad, Tema, Categoría...)", placeholder="Ej. Finanzas, Video, Amparo...")
+
+        # Aplicamos los filtros a un dataframe dedicado para la tabla (df_tabla)
+        df_tabla = df_completo.copy()
+        
+        if filtro_tabla_area != "Todas":
+            df_tabla = df_tabla[df_tabla['area'] == filtro_tabla_area]
             
-            cols_posibles = ['area', 'fecha_inicio', 'fecha_termino', 'actividad', 'tema', 'categoria', 'sub_categoria', 'sub_sub_categoria', 'horas_reales', 'margen', 'estado']
-            cols_mostrar = [col for col in cols_posibles if col in df_vista.columns]
+        if texto_busqueda:
+            columnas_texto = ['actividad', 'tema', 'categoria', 'sub_categoria', 'sub_sub_categoria', 'proyecto']
+            columnas_existentes = [col for col in columnas_texto if col in df_tabla.columns]
+            filtro_texto = df_tabla[columnas_existentes].fillna('').astype(str).apply(lambda x: x.str.contains(texto_busqueda, case=False)).any(axis=1)
+            df_tabla = df_tabla[filtro_texto]
+        
+        st.markdown(f"**Resultados encontrados:** {len(df_tabla)}")
+
+        # Preparar vista de la tabla
+        df_vista = df_tabla.copy()
+        df_vista['horas_reales'] = (df_vista['minutos_reales'] / 60).apply(lambda x: f"{x:.2f} h")
+        
+        cols_posibles = ['area', 'fecha_inicio', 'fecha_termino', 'actividad', 'tema', 'categoria', 'sub_categoria', 'sub_sub_categoria', 'horas_reales', 'estado']
+        cols_mostrar = [col for col in cols_posibles if col in df_vista.columns]
+        
+        st.dataframe(df_vista[cols_mostrar], use_container_width=True)
+        
+        st.markdown("---")
+        st.markdown("### ⚙️ Modificar o Eliminar Registro")
+        
+        if df_tabla.empty:
+            st.info("No hay registros que coincidan con tu búsqueda.")
+        else:
+            # Selector inteligente basado en los resultados de la búsqueda
+            opciones_editar = dict(zip(df_tabla['id'], df_tabla['area'] + " | " + df_tabla['fecha'].astype(str) + " | " + df_tabla['actividad']))
             
-            st.dataframe(df_vista[cols_mostrar], use_container_width=True)
-            
-            st.markdown("---")
-            st.markdown("### 🗑️ Eliminar Registro")
-            
-            opciones_eliminar = dict(zip(df['id'], df['area'] + " | " + df['fecha'].astype(str) + " | " + df['actividad']))
-            
-            registro_a_eliminar = st.selectbox(
-                "Selecciona la actividad que deseas eliminar:",
-                options=list(opciones_eliminar.keys()),
-                format_func=lambda x: opciones_eliminar[x]
+            registro_seleccionado = st.selectbox(
+                "Selecciona el registro que deseas gestionar:",
+                options=list(opciones_editar.keys()),
+                format_func=lambda x: opciones_editar[x]
             )
             
-            if st.button("🚨 Eliminar Definitivamente", type="primary"):
-                try:
-                    supabase.table("registro_actividades").delete().eq("id", registro_a_eliminar).execute()
-                    st.success("✅ Registro eliminado correctamente. Actualizando...")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"❌ Error al eliminar el registro: {e}")
+            if registro_seleccionado:
+                accion = st.radio("¿Qué acción deseas realizar?", ["✏️ Editar Registro", "🗑️ Eliminar Registro"], horizontal=True)
+                
+                if accion == "🗑️ Eliminar Registro":
+                    st.warning("⚠️ Esta acción no se puede deshacer.")
+                    if st.button("🚨 Eliminar Definitivamente", type="primary"):
+                        try:
+                            supabase.table("registro_actividades").delete().eq("id", registro_seleccionado).execute()
+                            st.success("✅ Registro eliminado correctamente. Actualizando...")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ Error al eliminar el registro: {e}")
+                            
+                elif accion == "✏️ Editar Registro":
+                    st.info("Modifica los datos que necesites y presiona Guardar Cambios.")
+                    
+                    # Recuperamos los datos de la fila seleccionada
+                    fila = df_tabla[df_tabla['id'] == registro_seleccionado].iloc[0]
+                    area_edit = fila['area']
+                    
+                    with st.expander("Abir Formulario de Edición", expanded=True):
+                        col_e1, col_e2 = st.columns(2)
+                        with col_e1: 
+                            f_inicio_e = st.date_input("Fecha Inicio", pd.to_datetime(fila.get('fecha_inicio', fila['fecha'])), key="ei")
+                        with col_e2: 
+                            f_termino_e = st.date_input("Fecha Término", pd.to_datetime(fila.get('fecha_termino', fila['fecha'])), key="et")
+                        
+                        datos_actualizados = {
+                            "fecha_inicio": str(f_inicio_e),
+                            "fecha_termino": str(f_termino_e),
+                            "fecha": str(f_termino_e)
+                        }
+
+                        if area_edit == "Lexicodex":
+                            cat_val = fila.get('categoria', 'Contaduría')
+                            idx_cat = list(diccionario_lexicodex.keys()).index(cat_val) if cat_val in diccionario_lexicodex else 0
+                            cat_e = st.selectbox("Categoría", list(diccionario_lexicodex.keys()), index=idx_cat, key="ecat")
+                            
+                            sub_cats = diccionario_lexicodex[cat_e]
+                            sub_cat_val = fila.get('sub_categoria', '')
+                            idx_sub = sub_cats.index(sub_cat_val) if sub_cat_val in sub_cats else 0
+                            sub_cat_e = st.selectbox("Sub Categoría", sub_cats, index=idx_sub, key="esub")
+                            
+                            sub_sub_e = st.text_input("Sub sub categoría", str(fila.get('sub_sub_categoria', '')), key="esubsub")
+                            
+                            act_val = fila.get('actividad', 'Crucigrama')
+                            idx_act = ["Crucigrama", "Autodefinido", "Busca Palabra"].index(act_val) if act_val in ["Crucigrama", "Autodefinido", "Busca Palabra"] else 0
+                            act_e = st.selectbox("Actividad", ["Crucigrama", "Autodefinido", "Busca Palabra"], index=idx_act, key="eact")
+                            
+                            datos_actualizados.update({"categoria": cat_e, "sub_categoria": sub_cat_e, "sub_sub_categoria": sub_sub_e, "actividad": act_e})
+                        
+                        elif area_edit in ["NewsLetter", "TikTok"]:
+                            tema_e = st.text_input("Tema", str(fila.get('tema', '')), key="etema")
+                            prefijo = "Redacción: " if area_edit == "NewsLetter" else "Video: "
+                            datos_actualizados.update({"tema": tema_e, "actividad": f"{prefijo}{tema_e}"})
+
+                        col_t1, col_t2 = st.columns(2)
+                        with col_t1: 
+                            min_r_e = st.number_input("Min. Reales", min_value=1, value=int(fila.get('minutos_reales', 60)), key="emr")
+                        with col_t2: 
+                            min_o_e = st.number_input("Min. Objetivo", min_value=1, value=int(fila.get('minutos_objetivo', 60)), key="emo")
+                        
+                        pri_val = int(fila.get('prioridad', 3))
+                        idx_pri = [3, 2, 1].index(pri_val) if pri_val in [3, 2, 1] else 0
+                        pri_e = st.selectbox("Prioridad", [3, 2, 1], index=idx_pri, format_func=lambda x: f"{x} - {'Alta' if x==3 else 'Media' if x==2 else 'Baja'}", key="epri")
+                        
+                        est_val = fila.get('estado', 'Cumplido')
+                        idx_est = ["Cumplido", "Parcial", "Pendiente"].index(est_val) if est_val in ["Cumplido", "Parcial", "Pendiente"] else 0
+                        est_e = st.selectbox("Estado", ["Cumplido", "Parcial", "Pendiente"], index=idx_est, key="eest")
+                        
+                        cal_e = st.slider("Calidad del Entregable", 1, 5, int(fila.get('calidad', 5)), key="ecal")
+                        cost_e = st.number_input("Costo por Hora ($)", min_value=0.0, value=float(fila.get('costo_hora', 850.0)), step=50.0, key="ecost")
+                        
+                        datos_actualizados.update({"minutos_reales": min_r_e, "minutos_objetivo": min_o_e, "prioridad": pri_e, "estado": est_e, "calidad": cal_e, "costo_hora": cost_e})
+
+                        if st.button("💾 Guardar Cambios", type="primary"):
+                            try:
+                                supabase.table("registro_actividades").update(datos_actualizados).eq("id", registro_seleccionado).execute()
+                                st.success("✅ ¡Registro modificado con éxito! Actualizando...")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"❌ Error al guardar los cambios: {e}")

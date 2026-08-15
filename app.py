@@ -343,7 +343,7 @@ else:
         df_vista['horas_reales'] = (df_vista['minutos_reales'] / 60).apply(lambda x: f"{x:.2f} h")
         df_vista['costo_hora'] = df_vista['costo_hora'].apply(lambda x: f"${float(x):,.2f}" if pd.notna(x) else "$0.00")
         
-        # 🌟 MAGIA VISUAL: Llenamos los espacios en blanco (None/NaN) con un guion ("-") para que la tabla luzca limpia.
+        # MAGIA VISUAL: Llenamos los espacios en blanco
         df_vista = df_vista.fillna("-")
         
         cols_posibles = ['area', 'fecha_inicio', 'fecha_termino', 'actividad', 'tema', 'categoria', 'sub_categoria', 'sub_sub_categoria', 'horas_reales', 'calidad', 'costo_hora', 'estado']
@@ -358,7 +358,8 @@ else:
 
         cols_mostrar = [col for col in cols_posibles if col in df_vista.columns and col not in columnas_ocultas]
         
-        st.dataframe(df_vista[cols_mostrar], use_container_width=True)
+        # OCULTAMOS EL ÍNDICE CON hide_index=True
+        st.dataframe(df_vista[cols_mostrar], use_container_width=True, hide_index=True)
         
         st.markdown("---")
         st.markdown("### ⚙️ Modificar o Eliminar Registro")

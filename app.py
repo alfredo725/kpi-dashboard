@@ -343,9 +343,12 @@ else:
         df_vista['horas_reales'] = (df_vista['minutos_reales'] / 60).apply(lambda x: f"{x:.2f} h")
         df_vista['costo_hora'] = df_vista['costo_hora'].apply(lambda x: f"${float(x):,.2f}" if pd.notna(x) else "$0.00")
         
-        # AGREGAMOS CALIDAD Y COSTO_HORA A LA LISTA, Y OCULTAMOS COLUMNAS IRRELEVANTES DINÁMICAMENTE
+        # 🌟 MAGIA VISUAL: Llenamos los espacios en blanco (None/NaN) con un guion ("-") para que la tabla luzca limpia.
+        df_vista = df_vista.fillna("-")
+        
         cols_posibles = ['area', 'fecha_inicio', 'fecha_termino', 'actividad', 'tema', 'categoria', 'sub_categoria', 'sub_sub_categoria', 'horas_reales', 'calidad', 'costo_hora', 'estado']
         
+        # Ocultamiento dinámico de columnas si se selecciona un área específica
         if filtro_tabla_area == "Lexicodex":
             columnas_ocultas = ['tema']
         elif filtro_tabla_area in ["NewsLetter", "TikTok"]:

@@ -3,7 +3,7 @@ from supabase import create_client, Client
 from datetime import date
 import pandas as pd
 import plotly.express as px
-import time  # <-- Importado para permitir que los mensajes de éxito sean leíbles
+import time
 
 # ==========================================
 # 1. CONFIGURACIÓN DEL ENTORNO
@@ -338,11 +338,22 @@ else:
         
         st.markdown(f"**Resultados encontrados:** {len(df_tabla)}")
 
+        # Preparación visual de la tabla
         df_vista = df_tabla.copy()
         df_vista['horas_reales'] = (df_vista['minutos_reales'] / 60).apply(lambda x: f"{x:.2f} h")
+        df_vista['costo_hora'] = df_vista['costo_hora'].apply(lambda x: f"${float(x):,.2f}" if pd.notna(x) else "$0.00")
         
-        cols_posibles = ['area', 'fecha_inicio', 'fecha_termino', 'actividad', 'tema', 'categoria', 'sub_categoria', 'sub_sub_categoria', 'horas_reales', 'estado']
-        cols_mostrar = [col for col in cols_posibles if col in df_vista.columns]
+        # AGREGAMOS CALIDAD Y COSTO_HORA A LA LISTA, Y OCULTAMOS COLUMNAS IRRELEVANTES DINÁMICAMENTE
+        cols_posibles = ['area', 'fecha_inicio', 'fecha_termino', 'actividad', 'tema', 'categoria', 'sub_categoria', 'sub_sub_categoria', 'horas_reales', 'calidad', 'costo_hora', 'estado']
+        
+        if filtro_tabla_area == "Lexicodex":
+            columnas_ocultas = ['tema']
+        elif filtro_tabla_area in ["NewsLetter", "TikTok"]:
+            columnas_ocultas = ['categoria', 'sub_categoria', 'sub_sub_categoria']
+        else:
+            columnas_ocultas = []
+
+        cols_mostrar = [col for col in cols_posibles if col in df_vista.columns and col not in columnas_ocultas]
         
         st.dataframe(df_vista[cols_mostrar], use_container_width=True)
         
@@ -369,7 +380,7 @@ else:
                         try:
                             supabase.table("registro_actividades").delete().eq("id", registro_seleccionado).execute()
                             st.success("✅ Registro eliminado correctamente. Actualizando...")
-                            time.sleep(1.5) # Pausa para que el usuario pueda leer el mensaje
+                            time.sleep(1.5) 
                             st.rerun()
                         except Exception as e:
                             st.error(f"❌ Error al eliminar el registro: {e}")
@@ -447,7 +458,7 @@ else:
                             try:
                                 supabase.table("registro_actividades").update(datos_actualizados).eq("id", registro_seleccionado).execute()
                                 st.success("✅ ¡Registro modificado con éxito! Actualizando tablero...")
-                                time.sleep(1.5) # Pausa para que el usuario pueda leer el mensaje
+                                time.sleep(1.5)
                                 st.rerun()
                             except Exception as e:
                                 st.error(f"❌ Error al guardar los cambios: {e}")

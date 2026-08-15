@@ -134,11 +134,11 @@ with st.sidebar:
                     "area": "NewsLetter",
                     "fecha_inicio": str(f_inicio),
                     "fecha_termino": str(f_termino),
-                    "fecha": str(f_termino), # Para los filtros temporales
+                    "fecha": str(f_termino), 
                     "tema": tema_nl,
-                    "actividad": f"Redacción: {tema_nl}", # Mantenemos el campo actividad lleno para el sistema global
-                    "categoria": "NewsLetter", # Por defecto
-                    "proyecto": "NewsLetter", # Por defecto
+                    "actividad": f"Redacción: {tema_nl}", 
+                    "categoria": "NewsLetter", 
+                    "proyecto": "NewsLetter", 
                     "minutos_reales": min_reales,
                     "minutos_objetivo": min_objetivo,
                     "prioridad": prioridad,
@@ -156,10 +156,54 @@ with st.sidebar:
 
     # 🟣 FORMULARIO: TIKTOK
     elif area_seleccionada == "TikTok":
-        with st.form("form_tiktok", clear_on_submit=True):
-            st.subheader("Datos de TikTok")
-            st.info("⏳ Los campos de TikTok se programarán aquí.")
-            submit_tiktok = st.form_submit_button("Registrar en TikTok")
+        st.subheader("Datos de TikTok")
+        
+        col_f1, col_f2 = st.columns(2)
+        with col_f1:
+            f_inicio = st.date_input("Fecha Inicio", date.today())
+        with col_f2:
+            f_termino = st.date_input("Fecha Término", date.today())
+            
+        tema_tk = st.text_input("Tema del TikTok")
+        
+        col_t1, col_t2 = st.columns(2)
+        with col_t1:
+            min_reales = st.number_input("Min. Reales", min_value=1, value=60)
+        with col_t2:
+            min_objetivo = st.number_input("Min. Objetivo", min_value=1, value=60)
+            
+        prioridad = st.selectbox("Prioridad", [3, 2, 1], format_func=lambda x: f"{x} - {'Alta' if x==3 else 'Media' if x==2 else 'Baja'}")
+        estado = st.selectbox("Estado", ["Cumplido", "Parcial", "Pendiente"])
+        calidad = st.slider("Calidad del Entregable", 1, 5, 5)
+        costo_hora = st.number_input("Costo por hora ($)", min_value=0.0, value=850.0, step=50.0)
+        
+        if st.button("💾 Registrar en TikTok", type="primary"):
+            if tema_tk == "":
+                st.warning("⚠️ El campo 'Tema' no puede estar vacío.")
+            else:
+                nuevo_registro = {
+                    "area": "TikTok",
+                    "fecha_inicio": str(f_inicio),
+                    "fecha_termino": str(f_termino),
+                    "fecha": str(f_termino), 
+                    "tema": tema_tk,
+                    "actividad": f"Video: {tema_tk}", 
+                    "categoria": "TikTok", 
+                    "proyecto": "TikTok", 
+                    "minutos_reales": min_reales,
+                    "minutos_objetivo": min_objetivo,
+                    "prioridad": prioridad,
+                    "estado": estado,
+                    "calidad": calidad,
+                    "costo_hora": costo_hora,
+                    "ingreso": 0.0 
+                }
+                
+                try:
+                    supabase.table("registro_actividades").insert(nuevo_registro).execute()
+                    st.success("✅ ¡TikTok registrado exitosamente!")
+                except Exception as e:
+                    st.error(f"❌ Error en BD: {e}")
 
 # ==========================================
 # 4. EXTRACCIÓN Y MOTOR KPI
@@ -231,8 +275,8 @@ else:
             col_graf1, col_graf2 = st.columns(2)
             
             with col_graf1:
-                # La dona se adapta al área seleccionada
-                if area_filtro == "NewsLetter":
+                # La dona agrupa TikTok y NewsLetter por Estado (al no tener categorías como Lexicodex)
+                if area_filtro in ["NewsLetter", "TikTok"]:
                     df_pie = df.groupby("estado")["horas_reales"].sum().reset_index()
                     titulo_pie = "Distribución por Estado"
                     nombres = "estado"
@@ -247,16 +291,16 @@ else:
                 st.plotly_chart(fig1, use_container_width=True)
 
             with col_graf2:
-                # El gráfico de barras se adapta al área seleccionada
+                # El gráfico de barras se adapta según el área seleccionada
                 if area_filtro == "Lexicodex":
                     df_graf2 = df.groupby("sub_categoria")[["costo_actividad"]].sum().reset_index()
                     fig2 = px.bar(df_graf2, x="sub_categoria", y="costo_actividad", 
                                   title="Costo Operativo por Sub Categoría",
                                   labels={"costo_actividad": "Costo ($)", "sub_categoria": "Sub Categoría"})
-                elif area_filtro == "NewsLetter":
+                elif area_filtro in ["NewsLetter", "TikTok"]:
                     df_graf2 = df.groupby("tema")[["costo_actividad"]].sum().reset_index()
                     fig2 = px.bar(df_graf2, x="tema", y="costo_actividad", 
-                                  title="Costo Operativo por Tema de NewsLetter",
+                                  title=f"Costo Operativo por Tema de {area_filtro}",
                                   labels={"costo_actividad": "Costo Operativo ($)", "tema": "Tema"})
                 else:
                     df_graf2 = df.groupby("proyecto")[["ingreso", "costo_actividad"]].sum().reset_index()

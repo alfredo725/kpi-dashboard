@@ -41,7 +41,7 @@ with st.sidebar:
     st.header("📝 Nueva Actividad")
     
     area_seleccionada = st.selectbox(
-        "📂 Selecciona el Área de Trabajo:", 
+        "Selecciona el Área de Trabajo:", 
         ["Lexicodex", "NewsLetter", "TikTok"]
     )
     
@@ -49,7 +49,7 @@ with st.sidebar:
     
     # 🟢 FORMULARIO: LEXICODEX
     if area_seleccionada == "Lexicodex":
-        st.subheader("Datos de Lexicodex")
+        st.subheader("Datos Lexicodex")
         
         col_f1, col_f2 = st.columns(2)
         with col_f1:
@@ -72,7 +72,7 @@ with st.sidebar:
         prioridad = st.selectbox("Prioridad", [3, 2, 1], format_func=lambda x: f"{x} - {'Alta' if x==3 else 'Media' if x==2 else 'Baja'}")
         estado = st.selectbox("Estado", ["Cumplido", "Parcial", "Pendiente"])
         calidad = st.slider("Calidad del Entregable", 1, 5, 5)
-        costo_hora = st.number_input("Costo por hora ($)", min_value=0.0, value=850.0, step=50.0)
+        costo_hora = st.number_input("Costo por Hora ($)", min_value=0.0, value=850.0, step=50.0)
         
         if st.button("💾 Registrar en Lexicodex", type="primary"):
             if sub_sub_cat == "":
@@ -105,7 +105,7 @@ with st.sidebar:
 
     # 🟡 FORMULARIO: NEWSLETTER
     elif area_seleccionada == "NewsLetter":
-        st.subheader("Datos de NewsLetter")
+        st.subheader("Datos NewsLetter")
         
         col_f1, col_f2 = st.columns(2)
         with col_f1:
@@ -113,7 +113,7 @@ with st.sidebar:
         with col_f2:
             f_termino = st.date_input("Fecha Término", date.today())
             
-        tema_nl = st.text_input("Tema de la NewsLetter")
+        tema_nl = st.text_input("Tema NewsLetter")
         
         col_t1, col_t2 = st.columns(2)
         with col_t1:
@@ -124,7 +124,7 @@ with st.sidebar:
         prioridad = st.selectbox("Prioridad", [3, 2, 1], format_func=lambda x: f"{x} - {'Alta' if x==3 else 'Media' if x==2 else 'Baja'}")
         estado = st.selectbox("Estado", ["Cumplido", "Parcial", "Pendiente"])
         calidad = st.slider("Calidad del Entregable", 1, 5, 5)
-        costo_hora = st.number_input("Costo por hora ($)", min_value=0.0, value=850.0, step=50.0)
+        costo_hora = st.number_input("Costo por Hora ($)", min_value=0.0, value=850.0, step=50.0)
         
         if st.button("💾 Registrar en NewsLetter", type="primary"):
             if tema_nl == "":
@@ -156,7 +156,7 @@ with st.sidebar:
 
     # 🟣 FORMULARIO: TIKTOK
     elif area_seleccionada == "TikTok":
-        st.subheader("Datos de TikTok")
+        st.subheader("Datos TikTok")
         
         col_f1, col_f2 = st.columns(2)
         with col_f1:
@@ -164,7 +164,7 @@ with st.sidebar:
         with col_f2:
             f_termino = st.date_input("Fecha Término", date.today())
             
-        tema_tk = st.text_input("Tema del TikTok")
+        tema_tk = st.text_input("Tema TikTok")
         
         col_t1, col_t2 = st.columns(2)
         with col_t1:
@@ -175,7 +175,7 @@ with st.sidebar:
         prioridad = st.selectbox("Prioridad", [3, 2, 1], format_func=lambda x: f"{x} - {'Alta' if x==3 else 'Media' if x==2 else 'Baja'}")
         estado = st.selectbox("Estado", ["Cumplido", "Parcial", "Pendiente"])
         calidad = st.slider("Calidad del Entregable", 1, 5, 5)
-        costo_hora = st.number_input("Costo por hora ($)", min_value=0.0, value=850.0, step=50.0)
+        costo_hora = st.number_input("Costo por Hora ($)", min_value=0.0, value=850.0, step=50.0)
         
         if st.button("💾 Registrar en TikTok", type="primary"):
             if tema_tk == "":

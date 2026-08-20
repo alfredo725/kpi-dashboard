@@ -137,7 +137,7 @@ with st.sidebar:
                     "fecha_termino": str(f_termino),
                     "fecha": str(f_termino), 
                     "tema": tema_nl,
-                    "actividad": "NewsLetter", # <-- Corrección aplicada
+                    "actividad": "NewsLetter", 
                     "categoria": "NewsLetter", 
                     "proyecto": "NewsLetter", 
                     "minutos_reales": min_reales,
@@ -188,7 +188,7 @@ with st.sidebar:
                     "fecha_termino": str(f_termino),
                     "fecha": str(f_termino), 
                     "tema": tema_tk,
-                    "actividad": "Video",  # <-- Corrección aplicada
+                    "actividad": "Video", 
                     "categoria": "TikTok", 
                     "proyecto": "TikTok", 
                     "minutos_reales": min_reales,
@@ -338,6 +338,7 @@ else:
         
         st.markdown(f"**Resultados encontrados:** {len(df_tabla)}")
 
+        # Preparación visual de la tabla
         df_vista = df_tabla.copy()
         df_vista['horas_reales'] = (df_vista['minutos_reales'] / 60).apply(lambda x: f"{x:.2f} h")
         df_vista['costo_hora'] = df_vista['costo_hora'].apply(lambda x: f"${float(x):,.2f}" if pd.notna(x) else "$0.00")
@@ -363,24 +364,22 @@ else:
         if df_tabla.empty:
             st.info("No hay registros que coincidan con tu búsqueda.")
         else:
-            # 🌟 FUNCIÓN DE ETIQUETA RICA PARA EL SELECTOR
+            # 🌟 FUNCIÓN DE ETIQUETA RICA ACTUALIZADA PARA EL SELECTOR
             def formatear_opcion(row):
                 area = str(row.get('area', ''))
                 fecha = str(row.get('fecha', ''))
                 actividad = str(row.get('actividad', ''))
-                mins = int(row.get('minutos_reales', 0)) if pd.notna(row.get('minutos_reales')) else 0
                 
                 if area == "Lexicodex":
+                    cat = str(row.get('categoria', '')) if pd.notna(row.get('categoria')) else ''
                     sub_cat = str(row.get('sub_categoria', '')) if pd.notna(row.get('sub_categoria')) else ''
                     sub_sub = str(row.get('sub_sub_categoria', '')) if pd.notna(row.get('sub_sub_categoria')) else ''
-                    detalle = f"{sub_cat} > {sub_sub}"
+                    # Nuevo formato: Lexicodex | 2026-08-20 | (Categoria) - (Sub Categoria) - (Sub sub categoría) | Actividad
+                    return f"{area} | {fecha} | {cat} - {sub_cat} - {sub_sub} | {actividad}"
                 else:
                     tema = str(row.get('tema', '')) if pd.notna(row.get('tema')) else ''
-                    detalle = f"Tema: {tema}"
-                    
-                return f"{area} | {fecha} | {actividad} | {detalle} | ⏱️ {mins} min"
+                    return f"{area} | {fecha} | Tema: {tema} | {actividad}"
             
-            # Aplicamos la nueva etiqueta rica al diccionario de opciones
             opciones_editar = dict(zip(df_tabla['id'], df_tabla.apply(formatear_opcion, axis=1)))
             
             registro_seleccionado = st.selectbox(
@@ -445,7 +444,6 @@ else:
                             tema_val = fila.get('tema', '')
                             tema_e = st.text_input("Tema", str(tema_val) if pd.notna(tema_val) else "", key=f"etema_{registro_seleccionado}")
                             
-                            # <-- Corrección aplicada al guardar la edición
                             actividad_str = "NewsLetter" if area_edit == "NewsLetter" else "Video"
                             datos_actualizados.update({"tema": tema_e, "actividad": actividad_str})
 

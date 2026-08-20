@@ -137,7 +137,7 @@ with st.sidebar:
                     "fecha_termino": str(f_termino),
                     "fecha": str(f_termino), 
                     "tema": tema_nl,
-                    "actividad": f"Redacción: {tema_nl}", 
+                    "actividad": "NewsLetter", # <-- Corrección aplicada
                     "categoria": "NewsLetter", 
                     "proyecto": "NewsLetter", 
                     "minutos_reales": min_reales,
@@ -188,7 +188,7 @@ with st.sidebar:
                     "fecha_termino": str(f_termino),
                     "fecha": str(f_termino), 
                     "tema": tema_tk,
-                    "actividad": f"Video: {tema_tk}", 
+                    "actividad": "Video",  # <-- Corrección aplicada
                     "categoria": "TikTok", 
                     "proyecto": "TikTok", 
                     "minutos_reales": min_reales,
@@ -338,7 +338,6 @@ else:
         
         st.markdown(f"**Resultados encontrados:** {len(df_tabla)}")
 
-        # Preparación visual de la tabla
         df_vista = df_tabla.copy()
         df_vista['horas_reales'] = (df_vista['minutos_reales'] / 60).apply(lambda x: f"{x:.2f} h")
         df_vista['costo_hora'] = df_vista['costo_hora'].apply(lambda x: f"${float(x):,.2f}" if pd.notna(x) else "$0.00")
@@ -364,7 +363,25 @@ else:
         if df_tabla.empty:
             st.info("No hay registros que coincidan con tu búsqueda.")
         else:
-            opciones_editar = dict(zip(df_tabla['id'], df_tabla['area'] + " | " + df_tabla['fecha'].astype(str) + " | " + df_tabla['actividad']))
+            # 🌟 FUNCIÓN DE ETIQUETA RICA PARA EL SELECTOR
+            def formatear_opcion(row):
+                area = str(row.get('area', ''))
+                fecha = str(row.get('fecha', ''))
+                actividad = str(row.get('actividad', ''))
+                mins = int(row.get('minutos_reales', 0)) if pd.notna(row.get('minutos_reales')) else 0
+                
+                if area == "Lexicodex":
+                    sub_cat = str(row.get('sub_categoria', '')) if pd.notna(row.get('sub_categoria')) else ''
+                    sub_sub = str(row.get('sub_sub_categoria', '')) if pd.notna(row.get('sub_sub_categoria')) else ''
+                    detalle = f"{sub_cat} > {sub_sub}"
+                else:
+                    tema = str(row.get('tema', '')) if pd.notna(row.get('tema')) else ''
+                    detalle = f"Tema: {tema}"
+                    
+                return f"{area} | {fecha} | {actividad} | {detalle} | ⏱️ {mins} min"
+            
+            # Aplicamos la nueva etiqueta rica al diccionario de opciones
+            opciones_editar = dict(zip(df_tabla['id'], df_tabla.apply(formatear_opcion, axis=1)))
             
             registro_seleccionado = st.selectbox(
                 "Selecciona el registro que deseas gestionar:",
@@ -395,7 +412,6 @@ else:
                     with st.expander("Abir Formulario de Edición", expanded=True):
                         col_e1, col_e2 = st.columns(2)
                         with col_e1: 
-                            # 🔑 Llaves dinámicas asignadas a cada campo
                             f_inicio_e = st.date_input("Fecha Inicio", pd.to_datetime(fila.get('fecha_inicio', fila['fecha'])), key=f"ei_{registro_seleccionado}")
                         with col_e2: 
                             f_termino_e = st.date_input("Fecha Término", pd.to_datetime(fila.get('fecha_termino', fila['fecha'])), key=f"et_{registro_seleccionado}")
@@ -428,8 +444,10 @@ else:
                         elif area_edit in ["NewsLetter", "TikTok"]:
                             tema_val = fila.get('tema', '')
                             tema_e = st.text_input("Tema", str(tema_val) if pd.notna(tema_val) else "", key=f"etema_{registro_seleccionado}")
-                            prefijo = "Redacción: " if area_edit == "NewsLetter" else "Video: "
-                            datos_actualizados.update({"tema": tema_e, "actividad": f"{prefijo}{tema_e}"})
+                            
+                            # <-- Corrección aplicada al guardar la edición
+                            actividad_str = "NewsLetter" if area_edit == "NewsLetter" else "Video"
+                            datos_actualizados.update({"tema": tema_e, "actividad": actividad_str})
 
                         col_t1, col_t2 = st.columns(2)
                         with col_t1: 

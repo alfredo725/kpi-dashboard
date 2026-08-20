@@ -6,9 +6,45 @@ import plotly.express as px
 import time
 
 # ==========================================
-# 1. CONFIGURACIÓN DEL ENTORNO
+# 1. CONFIGURACIÓN DEL ENTORNO Y ACCESIBILIDAD
 # ==========================================
 st.set_page_config(page_title="Dashboard KPI", page_icon="📊", layout="wide")
+
+# --- INYECCIÓN DE CSS PARA MEJORAR LA UX (TERCERA EDAD) ---
+st.markdown("""
+<style>
+    /* Aumentar el tamaño y grosor de las etiquetas de texto para mejor lectura */
+    p, .stSelectbox label, .stNumberInput label, .stDateInput label, .stTextInput label, .stRadio label {
+        font-size: 1.15rem !important;
+        font-weight: 500 !important;
+    }
+    
+    /* Botones más grandes, altos y fáciles de presionar */
+    .stButton button {
+        min-height: 3.5rem !important;
+        font-size: 1.2rem !important;
+        font-weight: bold !important;
+        border-radius: 10px !important;
+    }
+    
+    /* Títulos con color contrastante para guiar la vista y separar secciones */
+    h1, h2, h3 {
+        color: #2E5984 !important; 
+        font-weight: 700 !important;
+    }
+    
+    /* Tarjetas de métricas (KPIs) más grandes y legibles */
+    [data-testid="stMetricValue"] {
+        font-size: 2.2rem !important;
+        font-weight: 800 !important;
+    }
+    [data-testid="stMetricLabel"] {
+        font-size: 1.1rem !important;
+        font-weight: bold !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 st.title("Índice Integral de Desempeño Profesional (IIDP)")
 
 @st.cache_resource
@@ -62,7 +98,6 @@ with st.sidebar:
         sub_cat_lex = st.selectbox("Sub Categoría", diccionario_lexicodex[cat_lex])
         sub_sub_cat = st.text_input("Sub sub categoría (Especificar)")
         
-        # ACT 1: "Video" añadido a la lista de opciones
         actividad_lex = st.selectbox("Actividad", ["Crucigrama", "Autodefinido", "Busca Palabra", "Video"])
         
         col_t1, col_t2 = st.columns(2)
@@ -115,7 +150,6 @@ with st.sidebar:
         with col_f2:
             f_termino = st.date_input("Fecha Término", date.today())
             
-        # ACT 2: Cambiado de text_input a selectbox con opciones fijas
         tema_nl = st.selectbox("Tema NewsLetter", ["NewsLetter MX", "NewsLetter EXC"])
         
         col_t1, col_t2 = st.columns(2)
@@ -416,7 +450,7 @@ else:
                     fila = df_tabla[df_tabla['id'] == registro_seleccionado].iloc[0]
                     area_edit = fila['area']
                     
-                    with st.expander("Abir Formulario de Edición", expanded=True):
+                    with st.expander("Abrir Formulario de Edición", expanded=True):
                         col_e1, col_e2 = st.columns(2)
                         with col_e1: 
                             f_inicio_e = st.date_input("Fecha Inicio", pd.to_datetime(fila.get('fecha_inicio', fila['fecha'])), key=f"ei_{registro_seleccionado}")
@@ -445,7 +479,7 @@ else:
                             act_val = fila.get('actividad', 'Crucigrama')
                             opciones_act = ["Crucigrama", "Autodefinido", "Busca Palabra", "Video"]
                             if pd.notna(act_val) and act_val not in opciones_act and str(act_val).strip() != "":
-                                opciones_act.append(str(act_val)) # Soporte por si había una actividad vieja que no está en la lista
+                                opciones_act.append(str(act_val)) 
                             idx_act = opciones_act.index(str(act_val)) if str(act_val) in opciones_act else 0
                             act_e = st.selectbox("Actividad", opciones_act, index=idx_act, key=f"eact_{registro_seleccionado}")
                             
@@ -455,7 +489,7 @@ else:
                             tema_val = fila.get('tema', 'NewsLetter MX')
                             opciones_tema_nl = ["NewsLetter MX", "NewsLetter EXC"]
                             if pd.notna(tema_val) and tema_val not in opciones_tema_nl and str(tema_val).strip() != "":
-                                opciones_tema_nl.append(str(tema_val)) # Por si guardaste una prueba con texto libre
+                                opciones_tema_nl.append(str(tema_val)) 
                                 
                             idx_tema = opciones_tema_nl.index(str(tema_val)) if str(tema_val) in opciones_tema_nl else 0
                             tema_e = st.selectbox("Tema NewsLetter", opciones_tema_nl, index=idx_tema, key=f"etema_{registro_seleccionado}")

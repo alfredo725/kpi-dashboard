@@ -343,12 +343,10 @@ else:
         df_vista['horas_reales'] = (df_vista['minutos_reales'] / 60).apply(lambda x: f"{x:.2f} h")
         df_vista['costo_hora'] = df_vista['costo_hora'].apply(lambda x: f"${float(x):,.2f}" if pd.notna(x) else "$0.00")
         
-        # MAGIA VISUAL: Llenamos los espacios en blanco
         df_vista = df_vista.fillna("-")
         
         cols_posibles = ['area', 'fecha_inicio', 'fecha_termino', 'actividad', 'tema', 'categoria', 'sub_categoria', 'sub_sub_categoria', 'horas_reales', 'calidad', 'costo_hora', 'estado']
         
-        # Ocultamiento dinámico de columnas si se selecciona un área específica
         if filtro_tabla_area == "Lexicodex":
             columnas_ocultas = ['tema']
         elif filtro_tabla_area in ["NewsLetter", "TikTok"]:
@@ -358,7 +356,6 @@ else:
 
         cols_mostrar = [col for col in cols_posibles if col in df_vista.columns and col not in columnas_ocultas]
         
-        # OCULTAMOS EL ÍNDICE CON hide_index=True
         st.dataframe(df_vista[cols_mostrar], use_container_width=True, hide_index=True)
         
         st.markdown("---")
@@ -398,9 +395,10 @@ else:
                     with st.expander("Abir Formulario de Edición", expanded=True):
                         col_e1, col_e2 = st.columns(2)
                         with col_e1: 
-                            f_inicio_e = st.date_input("Fecha Inicio", pd.to_datetime(fila.get('fecha_inicio', fila['fecha'])), key="ei")
+                            # 🔑 Llaves dinámicas asignadas a cada campo
+                            f_inicio_e = st.date_input("Fecha Inicio", pd.to_datetime(fila.get('fecha_inicio', fila['fecha'])), key=f"ei_{registro_seleccionado}")
                         with col_e2: 
-                            f_termino_e = st.date_input("Fecha Término", pd.to_datetime(fila.get('fecha_termino', fila['fecha'])), key="et")
+                            f_termino_e = st.date_input("Fecha Término", pd.to_datetime(fila.get('fecha_termino', fila['fecha'])), key=f"et_{registro_seleccionado}")
                         
                         datos_actualizados = {
                             "fecha_inicio": str(f_inicio_e),
@@ -411,50 +409,50 @@ else:
                         if area_edit == "Lexicodex":
                             cat_val = fila.get('categoria', 'Contaduría')
                             idx_cat = list(diccionario_lexicodex.keys()).index(cat_val) if cat_val in diccionario_lexicodex else 0
-                            cat_e = st.selectbox("Categoría", list(diccionario_lexicodex.keys()), index=idx_cat, key="ecat")
+                            cat_e = st.selectbox("Categoría", list(diccionario_lexicodex.keys()), index=idx_cat, key=f"ecat_{registro_seleccionado}")
                             
                             sub_cats = diccionario_lexicodex[cat_e]
                             sub_cat_val = fila.get('sub_categoria', '')
                             idx_sub = sub_cats.index(sub_cat_val) if sub_cat_val in sub_cats else 0
-                            sub_cat_e = st.selectbox("Sub Categoría", sub_cats, index=idx_sub, key="esub")
+                            sub_cat_e = st.selectbox("Sub Categoría", sub_cats, index=idx_sub, key=f"esub_{registro_seleccionado}")
                             
                             sub_sub_val = fila.get('sub_sub_categoria', '')
-                            sub_sub_e = st.text_input("Sub sub categoría", str(sub_sub_val) if pd.notna(sub_sub_val) else "", key="esubsub")
+                            sub_sub_e = st.text_input("Sub sub categoría", str(sub_sub_val) if pd.notna(sub_sub_val) else "", key=f"esubsub_{registro_seleccionado}")
                             
                             act_val = fila.get('actividad', 'Crucigrama')
                             idx_act = ["Crucigrama", "Autodefinido", "Busca Palabra"].index(act_val) if act_val in ["Crucigrama", "Autodefinido", "Busca Palabra"] else 0
-                            act_e = st.selectbox("Actividad", ["Crucigrama", "Autodefinido", "Busca Palabra"], index=idx_act, key="eact")
+                            act_e = st.selectbox("Actividad", ["Crucigrama", "Autodefinido", "Busca Palabra"], index=idx_act, key=f"eact_{registro_seleccionado}")
                             
                             datos_actualizados.update({"categoria": cat_e, "sub_categoria": sub_cat_e, "sub_sub_categoria": sub_sub_e, "actividad": act_e})
                         
                         elif area_edit in ["NewsLetter", "TikTok"]:
                             tema_val = fila.get('tema', '')
-                            tema_e = st.text_input("Tema", str(tema_val) if pd.notna(tema_val) else "", key="etema")
+                            tema_e = st.text_input("Tema", str(tema_val) if pd.notna(tema_val) else "", key=f"etema_{registro_seleccionado}")
                             prefijo = "Redacción: " if area_edit == "NewsLetter" else "Video: "
                             datos_actualizados.update({"tema": tema_e, "actividad": f"{prefijo}{tema_e}"})
 
                         col_t1, col_t2 = st.columns(2)
                         with col_t1: 
                             min_r_val = int(fila['minutos_reales']) if pd.notna(fila.get('minutos_reales')) else 60
-                            min_r_e = st.number_input("Min. Reales", min_value=1, value=min_r_val, key="emr")
+                            min_r_e = st.number_input("Min. Reales", min_value=1, value=min_r_val, key=f"emr_{registro_seleccionado}")
                         with col_t2: 
                             min_o_val = int(fila['minutos_objetivo']) if pd.notna(fila.get('minutos_objetivo')) else 60
-                            min_o_e = st.number_input("Min. Objetivo", min_value=1, value=min_o_val, key="emo")
+                            min_o_e = st.number_input("Min. Objetivo", min_value=1, value=min_o_val, key=f"emo_{registro_seleccionado}")
                         
                         pri_val = int(fila['prioridad']) if pd.notna(fila.get('prioridad')) else 3
                         idx_pri = [3, 2, 1].index(pri_val) if pri_val in [3, 2, 1] else 0
-                        pri_e = st.selectbox("Prioridad", [3, 2, 1], index=idx_pri, format_func=lambda x: f"{x} - {'Alta' if x==3 else 'Media' if x==2 else 'Baja'}", key="epri")
+                        pri_e = st.selectbox("Prioridad", [3, 2, 1], index=idx_pri, format_func=lambda x: f"{x} - {'Alta' if x==3 else 'Media' if x==2 else 'Baja'}", key=f"epri_{registro_seleccionado}")
                         
                         est_val = fila.get('estado', 'Cumplido')
                         if pd.isna(est_val): est_val = 'Cumplido'
                         idx_est = ["Cumplido", "Parcial", "Pendiente"].index(est_val) if est_val in ["Cumplido", "Parcial", "Pendiente"] else 0
-                        est_e = st.selectbox("Estado", ["Cumplido", "Parcial", "Pendiente"], index=idx_est, key="eest")
+                        est_e = st.selectbox("Estado", ["Cumplido", "Parcial", "Pendiente"], index=idx_est, key=f"eest_{registro_seleccionado}")
                         
                         cal_val = int(fila['calidad']) if pd.notna(fila.get('calidad')) else 5
-                        cal_e = st.slider("Calidad del Entregable", 1, 5, cal_val, key="ecal")
+                        cal_e = st.slider("Calidad del Entregable", 1, 5, cal_val, key=f"ecal_{registro_seleccionado}")
                         
                         cost_val = float(fila['costo_hora']) if pd.notna(fila.get('costo_hora')) else 850.0
-                        cost_e = st.number_input("Costo por Hora ($)", min_value=0.0, value=cost_val, step=50.0, key="ecost")
+                        cost_e = st.number_input("Costo por Hora ($)", min_value=0.0, value=cost_val, step=50.0, key=f"ecost_{registro_seleccionado}")
                         
                         datos_actualizados.update({"minutos_reales": min_r_e, "minutos_objetivo": min_o_e, "prioridad": pri_e, "estado": est_e, "calidad": cal_e, "costo_hora": cost_e})
 

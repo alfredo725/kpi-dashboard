@@ -43,14 +43,14 @@ with st.sidebar:
     
     area_seleccionada = st.selectbox(
         "Selecciona el Área de Trabajo:", 
-        ["Lexicodex", "NewsLetter", "TikTok"]
+        ["LexiCódex", "NewsLetter", "TikTok"]
     )
     
     st.markdown("---")
     
-    # 🟢 FORMULARIO: LEXICODEX
-    if area_seleccionada == "Lexicodex":
-        st.subheader("Datos Lexicodex")
+    # 🟢 FORMULARIO: LEXICÓDEX
+    if area_seleccionada == "LexiCódex":
+        st.subheader("Datos LexiCódex")
         
         col_f1, col_f2 = st.columns(2)
         with col_f1:
@@ -75,12 +75,12 @@ with st.sidebar:
         calidad = st.slider("Calidad del Entregable", 1, 5, 5)
         costo_hora = st.number_input("Costo por Hora ($)", min_value=0.0, value=850.0, step=50.0)
         
-        if st.button("💾 Registrar en Lexicodex", type="primary"):
+        if st.button("💾 Registrar en LexiCódex", type="primary"):
             if sub_sub_cat == "":
                 st.warning("⚠️ El campo de Sub sub categoría no puede estar vacío.")
             else:
                 nuevo_registro = {
-                    "area": "Lexicodex",
+                    "area": "LexiCódex",
                     "fecha_inicio": str(f_inicio),
                     "fecha_termino": str(f_termino),
                     "fecha": str(f_termino),
@@ -94,13 +94,13 @@ with st.sidebar:
                     "estado": estado,
                     "calidad": calidad,
                     "costo_hora": costo_hora,
-                    "proyecto": "Lexicodex",
+                    "proyecto": "LexiCódex",
                     "ingreso": 0.0 
                 }
                 
                 try:
                     supabase.table("registro_actividades").insert(nuevo_registro).execute()
-                    st.success("✅ ¡Actividad de Lexicodex registrada!")
+                    st.success("✅ ¡Actividad de LexiCódex registrada!")
                 except Exception as e:
                     st.error(f"❌ Error en BD: {e}")
 
@@ -165,6 +165,10 @@ with st.sidebar:
         with col_f2:
             f_termino = st.date_input("Fecha Término", date.today())
             
+        # NUEVOS CAMPOS DE CATEGORÍA PARA TIKTOK
+        cat_tk = st.selectbox("Categoría", list(diccionario_lexicodex.keys()), key="cat_tk_nuevo")
+        sub_cat_tk = st.selectbox("Sub Categoría", diccionario_lexicodex[cat_tk], key="sub_cat_tk_nuevo")
+            
         tema_tk = st.text_input("Tema TikTok")
         
         col_t1, col_t2 = st.columns(2)
@@ -187,9 +191,10 @@ with st.sidebar:
                     "fecha_inicio": str(f_inicio),
                     "fecha_termino": str(f_termino),
                     "fecha": str(f_termino), 
+                    "categoria": cat_tk,          # <-- Se agrega la categoría
+                    "sub_categoria": sub_cat_tk,  # <-- Se agrega la sub categoría
                     "tema": tema_tk,
                     "actividad": "Video", 
-                    "categoria": "TikTok", 
                     "proyecto": "TikTok", 
                     "minutos_reales": min_reales,
                     "minutos_objetivo": min_objetivo,
@@ -217,9 +222,11 @@ if not datos:
 else:
     df_completo = pd.DataFrame(datos)
     
+    # Normalización para compatibilidad de registros anteriores ("Lexicodex" -> "LexiCódex")
     if 'area' not in df_completo.columns:
-        df_completo['area'] = 'Lexicodex'
-    df_completo['area'] = df_completo['area'].fillna('Lexicodex')
+        df_completo['area'] = 'LexiCódex'
+    df_completo['area'] = df_completo['area'].fillna('LexiCódex')
+    df_completo['area'] = df_completo['area'].replace('Lexicodex', 'LexiCódex')
     
     tab_dash, tab_gestion = st.tabs(["📊 Dashboard Visual", "🗄️ Gestión de Registros"])
 
@@ -227,7 +234,7 @@ else:
     # PESTAÑA 1: DASHBOARD
     # ---------------------------------------------------------
     with tab_dash:
-        area_filtro = st.radio("Mostrar resultados para:", ["Todas las Áreas", "Lexicodex", "NewsLetter", "TikTok"], horizontal=True)
+        area_filtro = st.radio("Mostrar resultados para:", ["Todas las Áreas", "LexiCódex", "NewsLetter", "TikTok"], horizontal=True)
         
         df_dash = df_completo.copy()
         if area_filtro != "Todas las Áreas":
@@ -295,7 +302,7 @@ else:
                 st.plotly_chart(fig1, use_container_width=True)
 
             with col_graf2:
-                if area_filtro == "Lexicodex":
+                if area_filtro == "LexiCódex":
                     df_graf2 = df_dash.groupby("sub_categoria")[["costo_actividad"]].sum().reset_index()
                     fig2 = px.bar(df_graf2, x="sub_categoria", y="costo_actividad", 
                                   title="Costo Operativo por Sub Categoría",
@@ -321,7 +328,7 @@ else:
         
         col_b1, col_b2 = st.columns([1, 2])
         with col_b1:
-            filtro_tabla_area = st.selectbox("Filtrar Tabla por Área:", ["Todas", "Lexicodex", "NewsLetter", "TikTok"])
+            filtro_tabla_area = st.selectbox("Filtrar Tabla por Área:", ["Todas", "LexiCódex", "NewsLetter", "TikTok"])
         with col_b2:
             texto_busqueda = st.text_input("Buscar por palabra (Actividad, Tema, Categoría...)", placeholder="Ej. Finanzas, Video, Amparo...")
 
@@ -338,7 +345,6 @@ else:
         
         st.markdown(f"**Resultados encontrados:** {len(df_tabla)}")
 
-        # Preparación visual de la tabla
         df_vista = df_tabla.copy()
         df_vista['horas_reales'] = (df_vista['minutos_reales'] / 60).apply(lambda x: f"{x:.2f} h")
         df_vista['costo_hora'] = df_vista['costo_hora'].apply(lambda x: f"${float(x):,.2f}" if pd.notna(x) else "$0.00")
@@ -347,10 +353,13 @@ else:
         
         cols_posibles = ['area', 'fecha_inicio', 'fecha_termino', 'actividad', 'tema', 'categoria', 'sub_categoria', 'sub_sub_categoria', 'horas_reales', 'calidad', 'costo_hora', 'estado']
         
-        if filtro_tabla_area == "Lexicodex":
+        # Ajuste dinámico de columnas (TikTok ahora requiere categoría y sub_categoría)
+        if filtro_tabla_area == "LexiCódex":
             columnas_ocultas = ['tema']
-        elif filtro_tabla_area in ["NewsLetter", "TikTok"]:
+        elif filtro_tabla_area == "NewsLetter":
             columnas_ocultas = ['categoria', 'sub_categoria', 'sub_sub_categoria']
+        elif filtro_tabla_area == "TikTok":
+            columnas_ocultas = ['sub_sub_categoria']
         else:
             columnas_ocultas = []
 
@@ -364,21 +373,28 @@ else:
         if df_tabla.empty:
             st.info("No hay registros que coincidan con tu búsqueda.")
         else:
-            # 🌟 FUNCIÓN DE ETIQUETA RICA ACTUALIZADA PARA EL SELECTOR
+            # 🌟 FUNCIÓN DE ETIQUETA RICA ACTUALIZADA PARA CADA ÁREA
             def formatear_opcion(row):
                 area = str(row.get('area', ''))
                 fecha = str(row.get('fecha', ''))
                 actividad = str(row.get('actividad', ''))
                 
-                if area == "Lexicodex":
+                if area == "LexiCódex":
                     cat = str(row.get('categoria', '')) if pd.notna(row.get('categoria')) else ''
                     sub_cat = str(row.get('sub_categoria', '')) if pd.notna(row.get('sub_categoria')) else ''
                     sub_sub = str(row.get('sub_sub_categoria', '')) if pd.notna(row.get('sub_sub_categoria')) else ''
-                    # Nuevo formato: Lexicodex | 2026-08-20 | (Categoria) - (Sub Categoria) - (Sub sub categoría) | Actividad
+                    # LexiCódex | Fecha | (Categoria) - (Sub Categoria) - (Sub sub categoría) | Actividad
                     return f"{area} | {fecha} | {cat} - {sub_cat} - {sub_sub} | {actividad}"
-                else:
+                elif area == "NewsLetter":
                     tema = str(row.get('tema', '')) if pd.notna(row.get('tema')) else ''
-                    return f"{area} | {fecha} | Tema: {tema} | {actividad}"
+                    # NewsLetter | Fecha | Tema: [Tema]
+                    return f"{area} | {fecha} | Tema: {tema}"
+                elif area == "TikTok":
+                    tema = str(row.get('tema', '')) if pd.notna(row.get('tema')) else ''
+                    # TikTok | Fecha | Tema: [Tema]
+                    return f"{area} | {fecha} | Tema: {tema}"
+                else:
+                    return f"{area} | {fecha} | {actividad}"
             
             opciones_editar = dict(zip(df_tabla['id'], df_tabla.apply(formatear_opcion, axis=1)))
             
@@ -421,7 +437,7 @@ else:
                             "fecha": str(f_termino_e)
                         }
 
-                        if area_edit == "Lexicodex":
+                        if area_edit == "LexiCódex":
                             cat_val = fila.get('categoria', 'Contaduría')
                             idx_cat = list(diccionario_lexicodex.keys()).index(cat_val) if cat_val in diccionario_lexicodex else 0
                             cat_e = st.selectbox("Categoría", list(diccionario_lexicodex.keys()), index=idx_cat, key=f"ecat_{registro_seleccionado}")
@@ -440,12 +456,25 @@ else:
                             
                             datos_actualizados.update({"categoria": cat_e, "sub_categoria": sub_cat_e, "sub_sub_categoria": sub_sub_e, "actividad": act_e})
                         
-                        elif area_edit in ["NewsLetter", "TikTok"]:
+                        elif area_edit == "NewsLetter":
                             tema_val = fila.get('tema', '')
-                            tema_e = st.text_input("Tema", str(tema_val) if pd.notna(tema_val) else "", key=f"etema_{registro_seleccionado}")
+                            tema_e = st.text_input("Tema NewsLetter", str(tema_val) if pd.notna(tema_val) else "", key=f"etema_{registro_seleccionado}")
+                            datos_actualizados.update({"tema": tema_e, "actividad": "NewsLetter"})
                             
-                            actividad_str = "NewsLetter" if area_edit == "NewsLetter" else "Video"
-                            datos_actualizados.update({"tema": tema_e, "actividad": actividad_str})
+                        elif area_edit == "TikTok":
+                            # En TikTok ahora también recuperamos la Categoría y Sub Categoría
+                            cat_val = fila.get('categoria', 'Contaduría')
+                            idx_cat = list(diccionario_lexicodex.keys()).index(cat_val) if cat_val in diccionario_lexicodex else 0
+                            cat_e = st.selectbox("Categoría", list(diccionario_lexicodex.keys()), index=idx_cat, key=f"ecat_tk_{registro_seleccionado}")
+                            
+                            sub_cats = diccionario_lexicodex[cat_e]
+                            sub_cat_val = fila.get('sub_categoria', '')
+                            idx_sub = sub_cats.index(sub_cat_val) if sub_cat_val in sub_cats else 0
+                            sub_cat_e = st.selectbox("Sub Categoría", sub_cats, index=idx_sub, key=f"esub_tk_{registro_seleccionado}")
+                            
+                            tema_val = fila.get('tema', '')
+                            tema_e = st.text_input("Tema TikTok", str(tema_val) if pd.notna(tema_val) else "", key=f"etema_tk_{registro_seleccionado}")
+                            datos_actualizados.update({"categoria": cat_e, "sub_categoria": sub_cat_e, "tema": tema_e, "actividad": "Video"})
 
                         col_t1, col_t2 = st.columns(2)
                         with col_t1: 
